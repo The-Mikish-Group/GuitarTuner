@@ -1,10 +1,13 @@
-const CACHE_NAME = 'guitar-tuner-v1';
+const CACHE_NAME = 'guitar-tuner-v2';
 const ASSETS = [
     '/',
     '/index.html',
     '/style.css',
     '/app.js',
-    '/manifest.json'
+    '/manifest.json',
+    '/icon.svg',
+    '/icon-192.png',
+    '/icon-512.png'
 ];
 
 self.addEventListener('install', event => {

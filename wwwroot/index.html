@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -8,6 +8,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Guitar Tuner</title>
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -16,91 +18,96 @@
 <body>
     <div id="app">
         <!-- Header -->
-        <header>
-            <h1>🎸 Guitar Tuner</h1>
+        <header role="banner">
+            <div class="header-row">
+                <h1>&#127928; Guitar Tuner</h1>
+                <button id="theme-toggle" aria-label="Toggle light/dark theme" title="Toggle theme">
+                    <span id="theme-icon">&#9788;</span>
+                </button>
+            </div>
             <div id="tuning-label">Standard Tuning</div>
         </header>
 
-        <!-- Main Tuner Display -->
-        <div id="tuner-display">
-            <!-- Note Display -->
-            <div id="note-container">
-                <div id="detected-note">--</div>
-                <div id="detected-octave"></div>
+        <!-- Tuning Selector -->
+        <nav id="tuning-bar" aria-label="Tuning and calibration">
+            <div id="tuning-selector">
+                <label for="tuning-select" class="sr-only">Tuning</label>
+                <select id="tuning-select" aria-label="Select tuning"></select>
             </div>
+            <div id="calibration-bar">
+                <button id="a4-down" aria-label="Decrease A4 reference frequency">−</button>
+                <span id="a4-display" aria-live="polite">A4 = 440 Hz</span>
+                <button id="a4-up" aria-label="Increase A4 reference frequency">+</button>
+            </div>
+        </nav>
 
-            <!-- Frequency Display -->
-            <div id="frequency-display">-- Hz</div>
-
-            <!-- Cents Gauge -->
-            <div id="gauge-container">
-                <div id="gauge-labels">
-                    <span>♭ Flat</span>
-                    <span>In Tune</span>
-                    <span>Sharp ♯</span>
+        <!-- Main Content Wrapper (for responsive layout) -->
+        <div id="main-content">
+            <!-- Main Tuner Display -->
+            <main id="tuner-display">
+                <!-- Note Display -->
+                <div id="note-container" aria-live="polite">
+                    <div id="detected-note">--</div>
+                    <div id="detected-octave"></div>
                 </div>
-                <div id="gauge">
-                    <div id="gauge-track">
-                        <div id="gauge-center-zone"></div>
-                        <div id="gauge-needle"></div>
+
+                <!-- Frequency Display -->
+                <div id="frequency-display">-- Hz</div>
+
+                <!-- Confidence Indicator -->
+                <div id="confidence-container" aria-label="Signal confidence">
+                    <div id="confidence-bar">
+                        <div id="confidence-fill"></div>
                     </div>
+                    <span id="confidence-label">--</span>
                 </div>
-                <div id="cents-display">0 cents</div>
-            </div>
 
-            <!-- Status Message -->
-            <div id="status-message">Tap Start to begin</div>
-        </div>
+                <!-- Cents Gauge -->
+                <div id="gauge-container" role="meter" aria-label="Tuning accuracy"
+                     aria-valuemin="-50" aria-valuemax="50" aria-valuenow="0"
+                     aria-valuetext="0 cents">
+                    <div id="gauge-labels">
+                        <span>&#9837; Flat</span>
+                        <span>In Tune</span>
+                        <span>Sharp &#9839;</span>
+                    </div>
+                    <div id="gauge">
+                        <div id="gauge-track">
+                            <div id="gauge-center-zone"></div>
+                            <div id="gauge-needle"></div>
+                        </div>
+                    </div>
+                    <div id="cents-display">0 cents</div>
+                </div>
 
-        <!-- String Selector -->
-        <div id="string-selector">
-            <div class="string-row">
-                <button class="string-btn" data-string="0" data-note="E2">
-                    <span class="string-number">6</span>
-                    <span class="string-note">E2</span>
-                    <span class="string-hz">82.41</span>
-                </button>
-                <button class="string-btn" data-string="1" data-note="A2">
-                    <span class="string-number">5</span>
-                    <span class="string-note">A2</span>
-                    <span class="string-hz">110.00</span>
-                </button>
-                <button class="string-btn" data-string="2" data-note="D3">
-                    <span class="string-number">4</span>
-                    <span class="string-note">D3</span>
-                    <span class="string-hz">146.83</span>
-                </button>
-            </div>
-            <div class="string-row">
-                <button class="string-btn" data-string="3" data-note="G3">
-                    <span class="string-number">3</span>
-                    <span class="string-note">G3</span>
-                    <span class="string-hz">196.00</span>
-                </button>
-                <button class="string-btn" data-string="4" data-note="B3">
-                    <span class="string-number">2</span>
-                    <span class="string-note">B3</span>
-                    <span class="string-hz">246.94</span>
-                </button>
-                <button class="string-btn" data-string="5" data-note="E4">
-                    <span class="string-number">1</span>
-                    <span class="string-note">E4</span>
-                    <span class="string-hz">329.63</span>
-                </button>
-            </div>
-        </div>
+                <!-- Pitch History Canvas -->
+                <canvas id="pitch-history" aria-hidden="true"></canvas>
 
-        <!-- Controls -->
-        <div id="controls">
-            <button id="start-btn" onclick="toggleTuner()">
-                <span id="btn-icon">🎤</span>
-                <span id="btn-text">Start Tuning</span>
-            </button>
+                <!-- Status Message -->
+                <div id="status-message" aria-live="assertive">Tap Start to begin</div>
+            </main>
+
+            <!-- Sidebar (string selector + controls, used in wide layouts) -->
+            <div id="sidebar">
+                <!-- String Selector -->
+                <div id="string-selector" role="group" aria-label="Guitar strings">
+                    <div class="string-row"></div>
+                    <div class="string-row"></div>
+                </div>
+
+                <!-- Controls -->
+                <div id="controls">
+                    <button id="start-btn" aria-label="Start tuning">
+                        <span id="btn-icon">&#127908;</span>
+                        <span id="btn-text">Start Tuning</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Footer -->
-        <footer>
-            <div>Auto-detect mode • Tap a string to lock</div>
+        <footer role="contentinfo">
+            <div>Auto-detect mode &bull; Tap a string to lock &bull; Keys 1-6 select strings</div>
         </footer>
     </div>
 
