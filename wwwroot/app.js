@@ -46,7 +46,7 @@ let stringsDirty = true;
 
 // Reference tone playback
 let toneContext = null;
-let toneOscillator = null;
+let toneOscillators = [];
 let toneGain = null;
 let toneTimeout = null;
 let playingToneIndex = null;
@@ -163,7 +163,7 @@ function selectTuning(key) {
     if (!TUNINGS[key]) return;
     activeTuningKey = key;
     invalidateStrings();
-    tuningLabel.textContent = TUNINGS[key].name + ' Tuning';
+    if (tuningLabel) tuningLabel.textContent = TUNINGS[key].name + ' Tuning';
     lockedString = null;
     rebuildStringSelector();
     localStorage.setItem('guitar-tuner-tuning', key);
@@ -197,6 +197,7 @@ function rebuildStringSelector() {
             if (e.target.classList.contains('tone-trigger')) return;
             if (lockedString === i) {
                 lockedString = null;
+                stopReferenceTone();
                 btn.classList.remove('locked');
                 btn.setAttribute('aria-pressed', 'false');
             } else {
@@ -207,6 +208,7 @@ function rebuildStringSelector() {
                 });
                 btn.classList.add('locked');
                 btn.setAttribute('aria-pressed', 'true');
+                playReferenceTone(i);
             }
         });
 
@@ -361,20 +363,56 @@ function playReferenceTone(index) {
     if (index < 0 || index >= strings.length) return;
 
     const freq = strings[index].freq;
+    var duration = 3;
+    var sustain = 1.5;
 
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     toneContext = new AudioCtx();
+    var t0 = toneContext.currentTime;
+
+    // Compressor to maximize perceived loudness on phone speakers
+    var compressor = toneContext.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-20, t0);
+    compressor.knee.setValueAtTime(10, t0);
+    compressor.ratio.setValueAtTime(12, t0);
+    compressor.attack.setValueAtTime(0.003, t0);
+    compressor.release.setValueAtTime(0.1, t0);
+    compressor.connect(toneContext.destination);
 
     toneGain = toneContext.createGain();
-    toneGain.gain.setValueAtTime(0, toneContext.currentTime);
-    toneGain.gain.linearRampToValueAtTime(0.25, toneContext.currentTime + 0.05);
-    toneGain.connect(toneContext.destination);
+    toneGain.gain.setValueAtTime(0, t0);
+    toneGain.gain.linearRampToValueAtTime(1.0, t0 + 0.02);
+    toneGain.gain.setValueAtTime(1.0, t0 + sustain);
+    toneGain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+    toneGain.connect(compressor);
 
-    toneOscillator = toneContext.createOscillator();
-    toneOscillator.type = 'sine';
-    toneOscillator.frequency.setValueAtTime(freq, toneContext.currentTime);
-    toneOscillator.connect(toneGain);
-    toneOscillator.start();
+    // Sawtooth wave is naturally rich in harmonics (like a bowed string),
+    // ensuring low notes are audible on phone speakers via upper partials.
+    // Play at the correct pitch plus one octave up for reinforcement.
+    toneOscillators = [];
+
+    var osc1 = toneContext.createOscillator();
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(freq, t0);
+    osc1.connect(toneGain);
+    osc1.start(t0);
+    osc1.stop(t0 + duration);
+    toneOscillators.push(osc1);
+
+    // Add octave-up reinforcement for low strings
+    if (freq < 200) {
+        var octaveGain = toneContext.createGain();
+        octaveGain.gain.setValueAtTime(0.6, t0);
+        octaveGain.connect(toneGain);
+
+        var osc2 = toneContext.createOscillator();
+        osc2.type = 'sawtooth';
+        osc2.frequency.setValueAtTime(freq * 2, t0);
+        osc2.connect(octaveGain);
+        osc2.start(t0);
+        osc2.stop(t0 + duration);
+        toneOscillators.push(osc2);
+    }
 
     playingToneIndex = index;
 
@@ -383,8 +421,8 @@ function playReferenceTone(index) {
         t.classList.toggle('playing', i === index);
     });
 
-    // Auto-stop after 3 seconds
-    toneTimeout = setTimeout(function() { stopReferenceTone(); }, 3000);
+    // Clean up after tone ends
+    toneTimeout = setTimeout(function() { stopReferenceTone(); }, duration * 1000);
 }
 
 function stopReferenceTone() {
@@ -393,22 +431,26 @@ function stopReferenceTone() {
         toneTimeout = null;
     }
 
+    var fadeTime = 0.15;
+
     if (toneGain && toneContext) {
         try {
-            toneGain.gain.linearRampToValueAtTime(0, toneContext.currentTime + 0.05);
+            toneGain.gain.cancelScheduledValues(toneContext.currentTime);
+            toneGain.gain.setValueAtTime(toneGain.gain.value, toneContext.currentTime);
+            toneGain.gain.exponentialRampToValueAtTime(0.001, toneContext.currentTime + fadeTime);
         } catch (e) { /* context may be closed */ }
     }
 
-    if (toneOscillator) {
+    toneOscillators.forEach(function(osc) {
         try {
-            toneOscillator.stop(toneContext ? toneContext.currentTime + 0.06 : 0);
+            osc.stop(toneContext ? toneContext.currentTime + fadeTime + 0.01 : 0);
         } catch (e) { /* already stopped */ }
-        toneOscillator = null;
-    }
+    });
+    toneOscillators = [];
 
     if (toneContext) {
         const ctx = toneContext;
-        setTimeout(function() { ctx.close().catch(function() {}); }, 100);
+        setTimeout(function() { ctx.close().catch(function() {}); }, (fadeTime + 0.05) * 1000);
         toneContext = null;
     }
 
@@ -797,7 +839,7 @@ function init() {
 
     // Setup tuning selector
     initTuningSelector();
-    tuningLabel.textContent = TUNINGS[activeTuningKey].name + ' Tuning';
+    if (tuningLabel) tuningLabel.textContent = TUNINGS[activeTuningKey].name + ' Tuning';
     tuningSelect.value = activeTuningKey;
 
     // Build string buttons

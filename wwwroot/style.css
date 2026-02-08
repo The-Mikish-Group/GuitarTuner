@@ -214,6 +214,7 @@ header h1 {
     flex-direction: column;
     min-height: 0;
     overflow-y: auto;
+    padding: 0 4px;
 }
 
 /* ===== TUNER DISPLAY ===== */
@@ -569,13 +570,37 @@ footer {
 
 /* ===== RESPONSIVE ===== */
 
-/* Short phones */
-@media (max-height: 600px) {
+/* Most phones in portrait */
+@media (max-height: 700px) {
+    #app { padding: 6px 12px; }
+    header { padding: 2px 0; }
+    header h1 { font-size: 1.2rem; }
+    #tuning-bar { padding: 4px 0; }
     #detected-note { font-size: 3.5rem; }
-    .string-btn { padding: 8px 4px; }
-    #gauge-container { padding: 6px 0; }
-    header { padding: 4px 0; }
+    #tuner-display { gap: 4px; }
+    #gauge-container { padding: 4px 0; }
+    #gauge-labels { margin-bottom: 3px; }
+    #cents-display { margin-top: 3px; }
     #pitch-history { height: 32px; }
+    #status-message { padding: 4px 14px; min-height: 24px; font-size: 0.8rem; }
+    #string-selector { padding: 6px 0; gap: 4px; }
+    .string-row { gap: 6px; }
+    .string-btn { padding: 6px 4px; border-radius: 10px; }
+    .string-note { font-size: 1rem; }
+    .string-hz { font-size: 0.55rem; }
+    #controls { padding: 4px 0; }
+    #start-btn { padding: 10px; border-radius: 10px; font-size: 0.9rem; }
+    footer { display: none; }
+}
+
+/* Very short phones */
+@media (max-height: 570px) {
+    #detected-note { font-size: 2.8rem; }
+    #pitch-history { display: none; }
+    .string-btn { padding: 4px 3px; }
+    .string-number { font-size: 0.55rem; }
+    .string-note { font-size: 0.9rem; }
+    #start-btn { padding: 8px; }
 }
 
 /* Tall phones */
