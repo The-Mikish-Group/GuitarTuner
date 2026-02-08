@@ -1,5 +1,5 @@
 // ============================================================
-// Guitar Tuner PWA - Main Application
+// Dolly Guitar Tuner PWA - Main Application
 // Uses Web Audio API + YIN pitch detection algorithm
 // ============================================================
 

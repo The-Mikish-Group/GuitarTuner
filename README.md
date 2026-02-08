@@ -1,4 +1,4 @@
-# Guitar Tuner
+# Dolly Guitar Tuner
 
 A real-time, browser-based guitar tuner built as a Progressive Web App (PWA). Uses the YIN pitch detection algorithm to accurately detect string frequencies from your microphone and provides visual feedback to help you tune your guitar.
 
