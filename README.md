@@ -13,14 +13,14 @@ A real-time, browser-based guitar tuner built as a Progressive Web App (PWA). Us
 
 ## Tech Stack
 
-- **Backend:** ASP.NET Core (.NET 9.0) — serves static files
+- **Backend:** ASP.NET Core (.NET 10.0) — serves static files
 - **Frontend:** Vanilla HTML, CSS, and JavaScript (no frameworks)
 - **Audio:** Web Audio API with a custom YIN pitch detection implementation
 - **PWA:** Service Worker with cache-first strategy + Web App Manifest
 
 ## Prerequisites
 
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or later
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later
 - A modern browser with Web Audio API support (Chrome, Firefox, Safari, Edge)
 - HTTPS is required in production for microphone access
 
