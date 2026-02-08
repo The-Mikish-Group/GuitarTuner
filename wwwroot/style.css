@@ -1,0 +1,332 @@
+/* ===== RESET & BASE ===== */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-dark: #0f0f1a;
+    --bg-card: #1a1a2e;
+    --bg-card-hover: #222240;
+    --accent: #e94560;
+    --accent-glow: rgba(233, 69, 96, 0.4);
+    --green: #00d68f;
+    --green-glow: rgba(0, 214, 143, 0.4);
+    --yellow: #ffc107;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0b8;
+    --text-dim: #6c6c80;
+    --border: #2a2a45;
+}
+
+html, body {
+    height: 100%;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 12px 16px;
+}
+
+/* ===== HEADER ===== */
+header {
+    text-align: center;
+    padding: 8px 0;
+    flex-shrink: 0;
+}
+
+header h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+#tuning-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+/* ===== TUNER DISPLAY ===== */
+#tuner-display {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 0;
+}
+
+/* Note Display */
+#note-container {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+#detected-note {
+    font-size: 5rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+#detected-octave {
+    font-size: 1.8rem;
+    font-weight: 300;
+    color: var(--text-secondary);
+}
+
+#frequency-display {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Gauge */
+#gauge-container {
+    width: 100%;
+    max-width: 360px;
+    padding: 12px 0;
+}
+
+#gauge-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    padding: 0 8px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#gauge {
+    padding: 0 8px;
+}
+
+#gauge-track {
+    position: relative;
+    height: 28px;
+    background: linear-gradient(90deg,
+        #e94560 0%,
+        #ffc107 25%,
+        #00d68f 42%,
+        #00d68f 58%,
+        #ffc107 75%,
+        #e94560 100%
+    );
+    border-radius: 14px;
+    overflow: visible;
+}
+
+#gauge-center-zone {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.15);
+    border-left: 2px solid rgba(255, 255, 255, 0.6);
+    border-right: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+#gauge-needle {
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 36px;
+    background: white;
+    border-radius: 3px;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+    transition: left 0.08s ease-out;
+    z-index: 2;
+}
+
+#cents-display {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 400;
+}
+
+/* Status */
+#status-message {
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 6px 18px;
+    border-radius: 20px;
+    transition: all 0.3s;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+}
+
+#status-message.flat {
+    color: var(--accent);
+    background: rgba(233, 69, 96, 0.1);
+}
+
+#status-message.sharp {
+    color: var(--accent);
+    background: rgba(233, 69, 96, 0.1);
+}
+
+#status-message.close {
+    color: var(--yellow);
+    background: rgba(255, 193, 7, 0.1);
+}
+
+#status-message.in-tune {
+    color: var(--green);
+    background: rgba(0, 214, 143, 0.1);
+    animation: pulse-green 1.5s infinite;
+}
+
+@keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 0 0 var(--green-glow); }
+    50% { box-shadow: 0 0 0 8px transparent; }
+}
+
+/* ===== STRING SELECTOR ===== */
+#string-selector {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 0;
+}
+
+.string-row {
+    display: flex;
+    gap: 8px;
+}
+
+.string-btn {
+    flex: 1;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--text-primary);
+    padding: 10px 6px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.string-btn:active {
+    transform: scale(0.96);
+}
+
+.string-btn.active {
+    border-color: var(--accent);
+    background: rgba(233, 69, 96, 0.08);
+    box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.string-btn.locked {
+    border-color: var(--accent);
+    background: rgba(233, 69, 96, 0.15);
+}
+
+.string-btn.in-tune {
+    border-color: var(--green) !important;
+    background: rgba(0, 214, 143, 0.1) !important;
+    box-shadow: 0 0 12px var(--green-glow) !important;
+}
+
+.string-number {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    font-weight: 300;
+}
+
+.string-note {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.string-hz {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    font-weight: 300;
+}
+
+/* ===== CONTROLS ===== */
+#controls {
+    flex-shrink: 0;
+    padding: 8px 0;
+}
+
+#start-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 14px;
+    background: var(--accent);
+    color: white;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#start-btn:active {
+    transform: scale(0.98);
+}
+
+#start-btn.listening {
+    background: #333355;
+    box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* ===== FOOTER ===== */
+footer {
+    flex-shrink: 0;
+    text-align: center;
+    padding: 6px 0;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-height: 600px) {
+    #detected-note { font-size: 3.5rem; }
+    .string-btn { padding: 8px 4px; }
+    #gauge-container { padding: 6px 0; }
+    header { padding: 4px 0; }
+}
+
+@media (min-height: 800px) {
+    #tuner-display { gap: 14px; }
+    #gauge-container { padding: 20px 0; }
+}

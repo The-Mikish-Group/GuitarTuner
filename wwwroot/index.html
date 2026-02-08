@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#e94560">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Guitar Tuner</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header>
+            <h1>🎸 Guitar Tuner</h1>
+            <div id="tuning-label">Standard Tuning</div>
+        </header>
+
+        <!-- Main Tuner Display -->
+        <div id="tuner-display">
+            <!-- Note Display -->
+            <div id="note-container">
+                <div id="detected-note">--</div>
+                <div id="detected-octave"></div>
+            </div>
+
+            <!-- Frequency Display -->
+            <div id="frequency-display">-- Hz</div>
+
+            <!-- Cents Gauge -->
+            <div id="gauge-container">
+                <div id="gauge-labels">
+                    <span>♭ Flat</span>
+                    <span>In Tune</span>
+                    <span>Sharp ♯</span>
+                </div>
+                <div id="gauge">
+                    <div id="gauge-track">
+                        <div id="gauge-center-zone"></div>
+                        <div id="gauge-needle"></div>
+                    </div>
+                </div>
+                <div id="cents-display">0 cents</div>
+            </div>
+
+            <!-- Status Message -->
+            <div id="status-message">Tap Start to begin</div>
+        </div>
+
+        <!-- String Selector -->
+        <div id="string-selector">
+            <div class="string-row">
+                <button class="string-btn" data-string="0" data-note="E2">
+                    <span class="string-number">6</span>
+                    <span class="string-note">E2</span>
+                    <span class="string-hz">82.41</span>
+                </button>
+                <button class="string-btn" data-string="1" data-note="A2">
+                    <span class="string-number">5</span>
+                    <span class="string-note">A2</span>
+                    <span class="string-hz">110.00</span>
+                </button>
+                <button class="string-btn" data-string="2" data-note="D3">
+                    <span class="string-number">4</span>
+                    <span class="string-note">D3</span>
+                    <span class="string-hz">146.83</span>
+                </button>
+            </div>
+            <div class="string-row">
+                <button class="string-btn" data-string="3" data-note="G3">
+                    <span class="string-number">3</span>
+                    <span class="string-note">G3</span>
+                    <span class="string-hz">196.00</span>
+                </button>
+                <button class="string-btn" data-string="4" data-note="B3">
+                    <span class="string-number">2</span>
+                    <span class="string-note">B3</span>
+                    <span class="string-hz">246.94</span>
+                </button>
+                <button class="string-btn" data-string="5" data-note="E4">
+                    <span class="string-number">1</span>
+                    <span class="string-note">E4</span>
+                    <span class="string-hz">329.63</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div id="controls">
+            <button id="start-btn" onclick="toggleTuner()">
+                <span id="btn-icon">🎤</span>
+                <span id="btn-text">Start Tuning</span>
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <div>Auto-detect mode • Tap a string to lock</div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
