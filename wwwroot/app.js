@@ -39,6 +39,10 @@ let activeTuningKey = 'standard';
 let timeDomainBuffer = null;
 let yinBuffer = null;
 
+// Noise cancellation
+let noiseCanceller = null;
+let isLearningNoise = false;
+
 // Cached active strings (dirty-flag)
 let cachedStrings = null;
 let cachedBounds = null;
@@ -268,13 +272,17 @@ async function startTuner() {
         timeDomainBuffer = new Float32Array(analyserNode.fftSize);
         yinBuffer = new Float32Array(Math.floor(analyserNode.fftSize / 2));
 
+        // Initialize noise cancellation
+        noiseCanceller = new NoiseCanceller(analyserNode.fftSize);
+        isLearningNoise = true;
+
         isListening = true;
         wasInTune = false;
         startBtn.classList.add('listening');
         btnIcon.textContent = '\u23F9'; // ⏹
         btnText.textContent = 'Stop Tuning';
         startBtn.setAttribute('aria-label', 'Stop tuning');
-        statusMessage.textContent = 'Listening...';
+        statusMessage.textContent = 'Learning background noise...';
         statusMessage.className = '';
 
         // Clear pitch history
@@ -313,6 +321,8 @@ function stopTuner() {
     // Release buffers
     timeDomainBuffer = null;
     yinBuffer = null;
+    noiseCanceller = null;
+    isLearningNoise = false;
 
     // Reset UI
     startBtn.classList.remove('listening');
@@ -464,6 +474,185 @@ function stopReferenceTone() {
 }
 
 // ============================================================
+// SPECTRAL SUBTRACTION NOISE CANCELLATION
+// ============================================================
+class NoiseCanceller {
+    constructor(fftSize) {
+        this.fftSize = fftSize;
+        this.halfSize = fftSize / 2;
+        this.noiseProfile = null;
+        this.learnFrames = [];
+        this.learnTarget = 20;
+        this.learned = false;
+        this.prevMag = null;
+
+        // Precompute Hann window
+        this.window = new Float32Array(fftSize);
+        for (let i = 0; i < fftSize; i++) {
+            this.window[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (fftSize - 1)));
+        }
+
+        // Precompute bit-reversal table
+        this.bitRev = new Uint32Array(fftSize);
+        const bits = Math.log2(fftSize) | 0;
+        for (let i = 0; i < fftSize; i++) {
+            let rev = 0;
+            let val = i;
+            for (let b = 0; b < bits; b++) {
+                rev = (rev << 1) | (val & 1);
+                val >>= 1;
+            }
+            this.bitRev[i] = rev;
+        }
+
+        // Precompute twiddle factors
+        this.twiddleRe = new Float32Array(this.halfSize);
+        this.twiddleIm = new Float32Array(this.halfSize);
+        for (let i = 0; i < this.halfSize; i++) {
+            const angle = -2 * Math.PI * i / fftSize;
+            this.twiddleRe[i] = Math.cos(angle);
+            this.twiddleIm[i] = Math.sin(angle);
+        }
+    }
+
+    // In-place radix-2 Cooley-Tukey FFT
+    fft(re, im) {
+        const n = this.fftSize;
+        // Bit-reversal permutation
+        for (let i = 0; i < n; i++) {
+            const j = this.bitRev[i];
+            if (i < j) {
+                let tmp = re[i]; re[i] = re[j]; re[j] = tmp;
+                tmp = im[i]; im[i] = im[j]; im[j] = tmp;
+            }
+        }
+        // Butterfly stages
+        for (let size = 2; size <= n; size *= 2) {
+            const halfSize = size / 2;
+            const step = n / size;
+            for (let i = 0; i < n; i += size) {
+                for (let j = 0; j < halfSize; j++) {
+                    const twIdx = j * step;
+                    const tRe = this.twiddleRe[twIdx] * re[i + j + halfSize] - this.twiddleIm[twIdx] * im[i + j + halfSize];
+                    const tIm = this.twiddleRe[twIdx] * im[i + j + halfSize] + this.twiddleIm[twIdx] * re[i + j + halfSize];
+                    re[i + j + halfSize] = re[i + j] - tRe;
+                    im[i + j + halfSize] = im[i + j] - tIm;
+                    re[i + j] += tRe;
+                    im[i + j] += tIm;
+                }
+            }
+        }
+    }
+
+    // Inverse FFT via conjugate trick
+    ifft(re, im) {
+        const n = this.fftSize;
+        // Conjugate
+        for (let i = 0; i < n; i++) im[i] = -im[i];
+        this.fft(re, im);
+        // Conjugate and scale
+        for (let i = 0; i < n; i++) {
+            re[i] /= n;
+            im[i] = -im[i] / n;
+        }
+    }
+
+    // Accumulate a frame during noise learning phase. Returns true when learning is complete.
+    learnFrame(buffer) {
+        if (this.learned) return true;
+
+        const n = this.fftSize;
+        const re = new Float32Array(n);
+        const im = new Float32Array(n);
+
+        // Apply Hann window
+        for (let i = 0; i < n; i++) {
+            re[i] = buffer[i] * this.window[i];
+        }
+
+        this.fft(re, im);
+
+        // Compute magnitude spectrum
+        const mag = new Float32Array(this.halfSize + 1);
+        for (let i = 0; i <= this.halfSize; i++) {
+            mag[i] = Math.sqrt(re[i] * re[i] + im[i] * im[i]);
+        }
+
+        this.learnFrames.push(mag);
+
+        if (this.learnFrames.length >= this.learnTarget) {
+            // Average all learned frames to create noise profile
+            this.noiseProfile = new Float32Array(this.halfSize + 1);
+            for (let f = 0; f < this.learnFrames.length; f++) {
+                for (let i = 0; i <= this.halfSize; i++) {
+                    this.noiseProfile[i] += this.learnFrames[f][i];
+                }
+            }
+            for (let i = 0; i <= this.halfSize; i++) {
+                this.noiseProfile[i] /= this.learnFrames.length;
+            }
+            this.learnFrames = [];
+            this.learned = true;
+            return true;
+        }
+        return false;
+    }
+
+    // Apply spectral subtraction, returning a cleaned time-domain buffer
+    process(buffer) {
+        if (!this.learned) return buffer;
+
+        const n = this.fftSize;
+        const re = new Float32Array(n);
+        const im = new Float32Array(n);
+
+        // Apply Hann window
+        for (let i = 0; i < n; i++) {
+            re[i] = buffer[i] * this.window[i];
+        }
+
+        this.fft(re, im);
+
+        // Extract magnitude and phase, apply subtraction
+        const bins = this.halfSize + 1;
+        if (!this.prevMag) {
+            this.prevMag = new Float32Array(bins);
+        }
+
+        for (let i = 0; i < bins; i++) {
+            const mag = Math.sqrt(re[i] * re[i] + im[i] * im[i]);
+            const phase = Math.atan2(im[i], re[i]);
+
+            // Spectral subtraction: over-subtraction factor 2.0, spectral floor 0.002
+            let cleanMag = Math.max(mag - 2.0 * this.noiseProfile[i], 0.002 * mag);
+
+            // Temporal smoothing
+            cleanMag = 0.8 * this.prevMag[i] + 0.2 * cleanMag;
+            this.prevMag[i] = cleanMag;
+
+            // Reconstruct complex spectrum
+            re[i] = cleanMag * Math.cos(phase);
+            im[i] = cleanMag * Math.sin(phase);
+
+            // Mirror for negative frequencies (except DC and Nyquist)
+            if (i > 0 && i < this.halfSize) {
+                re[n - i] = re[i];
+                im[n - i] = -im[i];
+            }
+        }
+
+        this.ifft(re, im);
+
+        // Return real part as cleaned buffer
+        const output = new Float32Array(n);
+        for (let i = 0; i < n; i++) {
+            output[i] = re[i];
+        }
+        return output;
+    }
+}
+
+// ============================================================
 // PITCH DETECTION LOOP
 // ============================================================
 function detectPitch() {
@@ -480,12 +669,34 @@ function detectPitch() {
 
     if (rms < 0.008) {
         // Too quiet — no string being played
+        // Still feed silence to noise learner during learning phase
+        if (isLearningNoise && noiseCanceller) {
+            const done = noiseCanceller.learnFrame(timeDomainBuffer);
+            if (done) {
+                isLearningNoise = false;
+                statusMessage.textContent = 'Listening...';
+            }
+        }
         animFrameId = requestAnimationFrame(detectPitch);
         return;
     }
 
-    // Run YIN pitch detection
-    const result = yinDetect(timeDomainBuffer, audioContext.sampleRate);
+    // During noise learning phase, feed frames to learner and skip pitch detection
+    if (isLearningNoise && noiseCanceller) {
+        const done = noiseCanceller.learnFrame(timeDomainBuffer);
+        if (done) {
+            isLearningNoise = false;
+            statusMessage.textContent = 'Listening...';
+        }
+        animFrameId = requestAnimationFrame(detectPitch);
+        return;
+    }
+
+    // Apply noise cancellation if available
+    const cleanBuffer = noiseCanceller ? noiseCanceller.process(timeDomainBuffer) : timeDomainBuffer;
+
+    // Run YIN pitch detection on cleaned buffer
+    const result = yinDetect(cleanBuffer, audioContext.sampleRate);
 
     // Update confidence display regardless
     updateConfidence(result.confidence);
